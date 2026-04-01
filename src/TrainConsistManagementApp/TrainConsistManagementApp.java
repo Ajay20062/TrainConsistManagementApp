@@ -1,4 +1,5 @@
 package TrainConsistManagementApp;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,7 +48,5 @@ public class TrainConsistManagementApp {
         for (Bogie b : bogies) {
             System.out.println(b);
         }
-
-        // Program continues...
     }
 }
