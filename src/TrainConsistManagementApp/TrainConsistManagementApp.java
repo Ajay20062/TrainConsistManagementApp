@@ -1,181 +1,208 @@
 package TrainConsistManagementApp;
 
-
 import java.util.*;
-import java.util.stream.Collectors;
 
-// ---------- UC14: Custom Exception ----------
-class InvalidCapacityException extends Exception {
-    public InvalidCapacityException(String message) {
+// ================= CUSTOM RUNTIME EXCEPTION =================
+class CargoSafetyException extends RuntimeException {
+    public CargoSafetyException(String message) {
         super(message);
     }
 }
 
-// ---------- UC7+: Bogie Classes ----------
-class PassengerBogie {
-    String type;
-    int capacity;
+// ================= ABSTRACT BOGIE =================
+abstract class Bogie {
+    protected String id;
 
-    public PassengerBogie(String type, int capacity) throws InvalidCapacityException {
-        if (capacity <= 0) {
-            throw new InvalidCapacityException("Capacity must be greater than zero");
-        }
+    public Bogie(String id) {
+        this.id = id;
+    }
+
+    public abstract void display();
+}
+
+// ================= PASSENGER BOGIE =================
+class PassengerBogie extends Bogie {
+    private final String type; // Sleeper, AC, First Class
+    private final int capacity;
+    private int bookedSeats;
+
+    public PassengerBogie(String id, String type, int capacity) {
+        super(id);
         this.type = type;
         this.capacity = capacity;
+        this.bookedSeats = 0;
     }
 
-    @Override
-    public String toString() {
-        return type + "(" + capacity + ")";
-    }
-}
-
-class GoodsBogie {
-    String type;
-    String cargo;
-
-    public GoodsBogie(String type, String cargo) {
-        this.type = type;
-        this.cargo = cargo;
+    public void bookSeat(int seats) {
+        if (bookedSeats + seats <= capacity) {
+            bookedSeats += seats;
+            System.out.println("✅ " + seats + " seats booked in " + type + " bogie.");
+        } else {
+            System.out.println("❌ Not enough seats available.");
+        }
     }
 
-    @Override
-    public String toString() {
-        return type + " → " + cargo;
+    public void display() {
+        System.out.println("Passenger Bogie [" + id + "] Type: " + type +
+                " | Capacity: " + capacity +
+                " | Booked: " + bookedSeats);
     }
 }
 
-// ---------- MAIN APP ----------
+// ================= GOODS BOGIE =================
+class GoodsBogie extends Bogie {
+    private final String shape;   // Rectangular / Cylindrical
+    private String cargo;
+
+    public GoodsBogie(String id, String shape) {
+        super(id);
+        this.shape = shape;
+    }
+
+    // UC15 IMPLEMENTATION
+    public void assignCargo(String cargoType) {
+        try {
+            // Safety validation
+            if (shape.equalsIgnoreCase("Rectangular") &&
+                    cargoType.equalsIgnoreCase("Petroleum")) {
+
+                throw new CargoSafetyException(
+                        "Unsafe Cargo! Petroleum cannot be stored in Rectangular bogie."
+                );
+            }
+
+            // Safe assignment
+            this.cargo = cargoType;
+            System.out.println("✅ Cargo '" + cargoType + "' assigned to " + shape + " bogie.");
+
+        } catch (CargoSafetyException e) {
+            System.out.println("❌ ERROR: " + e.getMessage());
+
+        } finally {
+            System.out.println("⚙️ Cargo assignment attempt completed for Bogie ID: " + id + "\n");
+        }
+    }
+
+    public void display() {
+        System.out.println("Goods Bogie [" + id + "] Shape: " + shape +
+                " | Cargo: " + (cargo == null ? "None" : cargo));
+    }
+}
+
+// ================= TRAIN =================
+class Train {
+    private final List<Bogie> bogies;
+
+    public Train() {
+        bogies = new ArrayList<>();
+    }
+
+    public void addBogie(Bogie b) {
+        bogies.add(b);
+        System.out.println("✅ Bogie added successfully.");
+    }
+
+    public void displayTrain() {
+        System.out.println("\n🚆 Train Composition:");
+        for (Bogie b : bogies) {
+            b.display();
+        }
+    }
+
+    public Bogie getBogieById(String id) {
+        for (Bogie b : bogies) {
+            if (b.id.equalsIgnoreCase(id)) {
+                return b;
+            }
+        }
+        return null;
+    }
+}
+
+// ================= MAIN APPLICATION =================
 public class TrainConsistManagementApp {
-
     public static void main(String[] args) {
 
-        System.out.println("=== Train Consist Management App ===");
+        Scanner sc = new Scanner(System.in);
+        Train train = new Train();
 
-        // ---------- UC1: Initialize ----------
-        List<String> trainConsist = new ArrayList<>();
-        System.out.println("Initial bogie count: " + trainConsist.size());
+        int choice;
 
-        // ---------- UC2: ArrayList ----------
-        List<String> passengerList = new ArrayList<>();
-        passengerList.add("Sleeper");
-        passengerList.add("AC Chair");
-        passengerList.add("First Class");
-        passengerList.remove("AC Chair");
-        System.out.println("\nPassenger List: " + passengerList);
-        System.out.println("Contains Sleeper? " + passengerList.contains("Sleeper"));
+        do {
+            System.out.println("\n===== 🚆 Train Consist Management =====");
+            System.out.println("1. Add Passenger Bogie");
+            System.out.println("2. Add Goods Bogie");
+            System.out.println("3. Book Seats");
+            System.out.println("4. Assign Cargo (UC15)");
+            System.out.println("5. Display Train");
+            System.out.println("0. Exit");
+            System.out.print("Enter choice: ");
+            choice = sc.nextInt();
 
-        // ---------- UC3: HashSet ----------
-        Set<String> bogieIds = new HashSet<>();
-        bogieIds.add("BG101");
-        bogieIds.add("BG101"); // duplicate ignored
-        bogieIds.add("BG102");
-        System.out.println("\nUnique Bogie IDs: " + bogieIds);
+            switch (choice) {
 
-        // ---------- UC4: LinkedList ----------
-        LinkedList<String> linkedTrain = new LinkedList<>();
-        linkedTrain.add("Engine");
-        linkedTrain.add("Sleeper");
-        linkedTrain.add("AC");
-        linkedTrain.add("Cargo");
-        linkedTrain.add("Guard");
-        linkedTrain.add(2, "Pantry");
-        linkedTrain.removeFirst();
-        linkedTrain.removeLast();
-        System.out.println("\nOrdered Train: " + linkedTrain);
+                case 1:
+                    System.out.print("Enter Bogie ID: ");
+                    String pid = sc.next();
+                    System.out.print("Enter Type (Sleeper/AC/First): ");
+                    String type = sc.next();
+                    System.out.print("Enter Capacity: ");
+                    int cap = sc.nextInt();
 
-        // ---------- UC5: LinkedHashSet ----------
-        Set<String> formation = new LinkedHashSet<>();
-        formation.add("Engine");
-        formation.add("Sleeper");
-        formation.add("Cargo");
-        formation.add("Guard");
-        formation.add("Sleeper"); // duplicate ignored
-        System.out.println("\nFormation: " + formation);
+                    train.addBogie(new PassengerBogie(pid, type, cap));
+                    break;
 
-        // ---------- UC6: HashMap ----------
-        Map<String, Integer> capacityMap = new HashMap<>();
-        capacityMap.put("Sleeper", 72);
-        capacityMap.put("AC Chair", 54);
-        capacityMap.put("First Class", 24);
+                case 2:
+                    System.out.print("Enter Bogie ID: ");
+                    String gid = sc.next();
+                    System.out.print("Enter Shape (Rectangular/Cylindrical): ");
+                    String shape = sc.next();
 
-        System.out.println("\nBogie Capacities:");
-        capacityMap.forEach((k, v) -> System.out.println(k + " → " + v));
+                    train.addBogie(new GoodsBogie(gid, shape));
+                    break;
 
-        try {
-            // ---------- UC7: Objects ----------
-            List<PassengerBogie> bogies = new ArrayList<>();
-            bogies.add(new PassengerBogie("Sleeper", 72));
-            bogies.add(new PassengerBogie("AC Chair", 54));
-            bogies.add(new PassengerBogie("First Class", 24));
+                case 3:
+                    System.out.print("Enter Bogie ID: ");
+                    String bid = sc.next();
+                    Bogie b = train.getBogieById(bid);
 
-            // ---------- UC7: Sorting ----------
-            bogies.sort(Comparator.comparingInt(b -> b.capacity));
-            System.out.println("\nSorted Bogies: " + bogies);
+                    if (b instanceof PassengerBogie) {
+                        System.out.print("Enter seats to book: ");
+                        int seats = sc.nextInt();
+                        ((PassengerBogie) b).bookSeat(seats);
+                    } else {
+                        System.out.println("❌ Not a Passenger Bogie.");
+                    }
+                    break;
 
-            // ---------- UC8: Filtering ----------
-            List<PassengerBogie> filtered = bogies.stream()
-                    .filter(b -> b.capacity > 50)
-                    .toList();
-            System.out.println("\nFiltered (>50): " + filtered);
+                case 4:
+                    System.out.print("Enter Bogie ID: ");
+                    String gid2 = sc.next();
+                    Bogie gb = train.getBogieById(gid2);
 
-            // ---------- UC9: Grouping ----------
-            Map<String, List<PassengerBogie>> grouped =
-                    bogies.stream().collect(Collectors.groupingBy(b -> b.type));
-            System.out.println("\nGrouped Bogies: " + grouped);
+                    if (gb instanceof GoodsBogie) {
+                        System.out.print("Enter Cargo Type: ");
+                        String cargo = sc.next();
+                        ((GoodsBogie) gb).assignCargo(cargo);
+                    } else {
+                        System.out.println("❌ Not a Goods Bogie.");
+                    }
+                    break;
 
-            // ---------- UC10: Reduce ----------
-            int total = bogies.stream()
-                    .map(b -> b.capacity)
-                    .reduce(0, Integer::sum);
-            System.out.println("\nTotal Capacity: " + total);
+                case 5:
+                    train.displayTrain();
+                    break;
 
-            // ---------- UC11: Regex ----------
-            String trainId = "TRN-1234";
-            String cargoCode = "PET-AB";
+                case 0:
+                    System.out.println("Exiting...");
+                    break;
 
-            boolean validTrain = trainId.matches("TRN-\\d{4}");
-            boolean validCargo = cargoCode.matches("PET-[A-Z]{2}");
-
-            System.out.println("\nTrain ID Valid? " + validTrain);
-            System.out.println("Cargo Code Valid? " + validCargo);
-
-            // ---------- UC12: Safety ----------
-            List<GoodsBogie> goods = new ArrayList<>();
-            goods.add(new GoodsBogie("Cylindrical", "Petroleum"));
-            goods.add(new GoodsBogie("Rectangular", "Coal"));
-
-            boolean safe = goods.stream().allMatch(g ->
-                    !g.type.equalsIgnoreCase("Cylindrical") ||
-                            g.cargo.equalsIgnoreCase("Petroleum")
-            );
-
-            System.out.println("\nSafety Status: " + (safe ? "SAFE" : "UNSAFE"));
-
-            // ---------- UC13: Performance ----------
-            long startLoop = System.nanoTime();
-            List<PassengerBogie> loopResult = new ArrayList<>();
-            for (PassengerBogie b : bogies) {
-                if (b.capacity > 50) loopResult.add(b);
+                default:
+                    System.out.println("Invalid choice!");
             }
-            long loopTime = System.nanoTime() - startLoop;
 
-            long startStream = System.nanoTime();
-            List<PassengerBogie> streamResult = bogies.stream()
-                    .filter(b -> b.capacity > 50)
-                    .toList();
-            long streamTime = System.nanoTime() - startStream;
+        } while (choice != 0);
 
-            System.out.println("\nLoop Time: " + loopTime);
-            System.out.println("Stream Time: " + streamTime);
-
-            // ---------- UC14: Exception ----------
-            PassengerBogie invalid = new PassengerBogie("Invalid", -10);
-
-        } catch (InvalidCapacityException e) {
-            System.out.println("\nException Caught: " + e.getMessage());
-        }
-
-        System.out.println("\n=== Program Completed ===");
+        sc.close();
     }
 }
